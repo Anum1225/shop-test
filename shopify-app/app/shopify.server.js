@@ -16,6 +16,7 @@ const shopify = shopifyApp({
   authPathPrefix: "/auth",
   sessionStorage: new PrismaSessionStorage(prisma),
   distribution: AppDistribution.AppStore,
+  isEmbeddedApp: true,
   future: {
     unstable_newEmbeddedAuthStrategy: true,
     removeRest: true,
@@ -27,7 +28,18 @@ const shopify = shopifyApp({
 
 export default shopify;
 export const apiVersion = ApiVersion.January25;
-export const addDocumentResponseHeaders = shopify.addDocumentResponseHeaders;
+
+// Custom addDocumentResponseHeaders with proper embedding headers
+export const addDocumentResponseHeaders = (request, headers) => {
+  shopify.addDocumentResponseHeaders(request, headers);
+
+  // Add headers for proper Shopify embedding
+  headers.set("X-Frame-Options", "ALLOWALL");
+  headers.set("Content-Security-Policy", "frame-ancestors https://*.myshopify.com https://admin.shopify.com;");
+
+  return headers;
+};
+
 export const authenticate = shopify.authenticate;
 export const unauthenticated = shopify.unauthenticated;
 export const login = shopify.login;

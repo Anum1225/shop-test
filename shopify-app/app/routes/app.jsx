@@ -4,21 +4,30 @@ import { AppProvider } from "@shopify/shopify-app-remix/react";
 import { NavMenu } from "@shopify/app-bridge-react";
 import polarisStyles from "@shopify/polaris/build/esm/styles.css?url";
 import { authenticate } from "../shopify.server";
+import { setupShopifyHeaders } from "../utils/middleware.js";
 
 export const links = () => [{ rel: "stylesheet", href: polarisStyles }];
 
 export const loader = async ({ request }) => {
-  // Authenticate the admin user
-  await authenticate.admin(request);
+  try {
+    // Authenticate the admin user
+    await authenticate.admin(request);
 
-  return { apiKey: process.env.SHOPIFY_API_KEY || "" };
+    return {
+      apiKey: process.env.SHOPIFY_API_KEY || "",
+      appUrl: process.env.SHOPIFY_APP_URL || ""
+    };
+  } catch (error) {
+    console.error("Authentication error:", error);
+    throw new Response("Authentication failed", { status: 401 });
+  }
 };
 
 export default function App() {
-  const { apiKey } = useLoaderData();
+  const { apiKey, appUrl } = useLoaderData();
 
   return (
-    <AppProvider isEmbeddedApp apiKey={apiKey}>
+    <AppProvider isEmbeddedApp apiKey={apiKey} forceRedirect={false}>
       <NavMenu>
         <Link to="/app" rel="home">
           Home
@@ -40,5 +49,6 @@ export function ErrorBoundary() {
 }
 
 export const headers = (headersArgs) => {
-  return boundary.headers(headersArgs);
+  const headers = boundary.headers(headersArgs);
+  return setupShopifyHeaders(headers);
 };

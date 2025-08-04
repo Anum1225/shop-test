@@ -34,6 +34,8 @@ if (host === "localhost") {
     host: host,
     port: parseInt(process.env.FRONTEND_PORT) || 8002,
     clientPort: 443,
+    timeout: 60000,
+    overlay: false,
   };
 }
 
@@ -42,12 +44,18 @@ export default defineConfig({
     allowedHosts: [host],
     cors: {
       preflightContinue: true,
+      origin: true,
+      credentials: true,
     },
     port: Number(process.env.PORT || 3000),
     hmr: hmrConfig,
     fs: {
       // See https://vitejs.dev/config/server-options.html#server-fs-allow for more information
       allow: ["app", "node_modules"],
+    },
+    headers: {
+      "X-Frame-Options": "ALLOWALL",
+      "Content-Security-Policy": "frame-ancestors *",
     },
   },
   plugins: [
