@@ -1,5 +1,5 @@
 import { json } from "@remix-run/node";
-import { authenticate } from "../../app/shopify.server";
+import { authenticate } from "../shopify.server";
 import axios from "axios";
 
 // Handle GET or CORS preflight OPTIONS request

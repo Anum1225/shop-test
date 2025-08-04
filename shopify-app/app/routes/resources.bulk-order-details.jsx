@@ -1,5 +1,5 @@
 import { json } from "@remix-run/node";
-import { authenticate } from "../../app/shopify.server";
+import { authenticate } from "../shopify.server";
 import { getToken } from "../utils/tokenStorage";
 import axios from "axios";
 import {
