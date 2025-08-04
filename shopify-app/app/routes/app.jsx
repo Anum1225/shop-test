@@ -5,6 +5,7 @@ import { NavMenu } from "@shopify/app-bridge-react";
 import polarisStyles from "@shopify/polaris/build/esm/styles.css?url";
 import { authenticate } from "../shopify.server";
 import { setupShopifyHeaders } from "../utils/middleware.js";
+import ErrorBoundary from "../components/ErrorBoundary";
 
 export const links = () => [{ rel: "stylesheet", href: polarisStyles }];
 
@@ -27,19 +28,21 @@ export default function App() {
   const { apiKey, appUrl } = useLoaderData();
 
   return (
-    <AppProvider isEmbeddedApp apiKey={apiKey} forceRedirect={false}>
-      <NavMenu>
-        <Link to="/app" rel="home">
-          Home
-        </Link>
-        <Link to="/app/orders">Orders</Link>
-        <Link to="/app/analytics">Analytics</Link>
-        <Link to="/app/tracking">Tracking</Link>
-        <Link to="/app/settings">Settings</Link>
-        <Link to="/app/riders">Riders</Link>
-      </NavMenu>
-      <Outlet />
-    </AppProvider>
+    <ErrorBoundary>
+      <AppProvider isEmbeddedApp apiKey={apiKey} forceRedirect={false}>
+        <NavMenu>
+          <Link to="/app" rel="home">
+            Home
+          </Link>
+          <Link to="/app/orders">Orders</Link>
+          <Link to="/app/analytics">Analytics</Link>
+          <Link to="/app/tracking">Tracking</Link>
+          <Link to="/app/settings">Settings</Link>
+          <Link to="/app/riders">Riders</Link>
+        </NavMenu>
+        <Outlet />
+      </AppProvider>
+    </ErrorBoundary>
   );
 }
 

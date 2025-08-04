@@ -57,6 +57,9 @@ export default defineConfig({
       "X-Frame-Options": "ALLOWALL",
       "Content-Security-Policy": "frame-ancestors *",
     },
+    // Add WebSocket error handling
+    middlewareMode: false,
+    strictPort: false,
   },
   plugins: [
     remix({

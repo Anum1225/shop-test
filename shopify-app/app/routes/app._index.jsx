@@ -195,16 +195,35 @@ const generateAirwayBill = async (order) => {
 };
 
 function RushrrDashboard({ token }) {
+  // Initialize all state hooks at the top level
   const [orders, setOrders] = useState([]);
   const [bookedOrders, setBookedOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [activeOrder, setActiveOrder] = useState(null);
   const [originalOrder, setOriginalOrder] = useState(null);
   const [editedOrder, setEditedOrder] = useState(null);
-  console.log(editedOrder)
   const [bookingLoading, setBookingLoading] = useState(false);
 
+  // Ensure token is available before proceeding
+  if (!token) {
+    return (
+      <Page fullWidth>
+        <Layout>
+          <Layout.Section>
+            <Card>
+              <Box padding="800" textAlign="center">
+                <Text variant="headingMd">Token not available</Text>
+              </Box>
+            </Card>
+          </Layout.Section>
+        </Layout>
+      </Page>
+    );
+  }
+
   useEffect(() => {
+    if (!token) return;
+
     const fetchOrders = async () => {
       try {
         const res = await fetch("api/orders", { method: "GET" });
@@ -214,6 +233,8 @@ function RushrrDashboard({ token }) {
         }
       } catch (err) {
         console.error("Failed to fetch orders", err);
+        // Set empty array on error to prevent undefined issues
+        setOrders([]);
       } finally {
         setLoading(false);
       }
@@ -226,11 +247,28 @@ function RushrrDashboard({ token }) {
     useIndexResourceState(orders);
 
  const handleEditClick = (order) => {
-  setActiveOrder(order);
+  try {
+    if (!order) {
+      console.error('No order provided to handleEditClick');
+      return;
+    }
 
-  const mapped = mapOrderForEditing(order);
-  setEditedOrder(mapped);
-  setOriginalOrder(mapped); // Save baseline
+    setActiveOrder(order);
+
+    const mapped = mapOrderForEditing(order);
+    if (mapped) {
+      setEditedOrder(mapped);
+      setOriginalOrder(mapped); // Save baseline
+    } else {
+      console.error('Failed to map order for editing');
+      setActiveOrder(null);
+    }
+  } catch (error) {
+    console.error('Error in handleEditClick:', error);
+    setActiveOrder(null);
+    setEditedOrder(null);
+    setOriginalOrder(null);
+  }
 };
 
 function getAllowedOrderUpdates(original, edited) {
@@ -650,7 +688,7 @@ function getAllowedOrderUpdates(original, edited) {
       </Layout>
 
       {/* Edit Order Modal */}
-      {activeOrder && (
+      {activeOrder && editedOrder && (
         <Modal
           open
           onClose={() => setActiveOrder(null)}
@@ -667,23 +705,23 @@ function getAllowedOrderUpdates(original, edited) {
             <BlockStack gap="400">
               <TextField
                 label="Customer Name"
-                value={editedOrder.customerName || ""}
+                value={editedOrder?.customerName || ""}
                 onChange={(val) => setEditedOrder({ ...editedOrder, customerName: val })}
               />
               <TextField
                 label="Customer Email"
-                value={editedOrder.customerEmail || ""}
+                value={editedOrder?.customerEmail || ""}
                 onChange={(val) => setEditedOrder({ ...editedOrder, customerEmail: val })}
               />
               <Select
                 label="City"
                 options={cities.map((city) => ({ label: city, value: city }))}
-                value={editedOrder.shippingAddress?.city || ""}
+                value={editedOrder?.shippingAddress?.city || ""}
                 onChange={(val) =>
                   setEditedOrder({
                     ...editedOrder,
                     shippingAddress: {
-                      ...editedOrder.shippingAddress,
+                      ...editedOrder?.shippingAddress,
                       city: val,
                     },
                   })
@@ -691,12 +729,12 @@ function getAllowedOrderUpdates(original, edited) {
               />
               <TextField
                 label="Billing Address"
-                value={editedOrder.billingAddress?.address1 || ""}
+                value={editedOrder?.billingAddress?.address1 || ""}
                 onChange={(val) =>
                   setEditedOrder({
                     ...editedOrder,
                     billingAddress: {
-                      ...editedOrder.billingAddress,
+                      ...editedOrder?.billingAddress,
                       address1: val,
                     },
                   })
@@ -704,12 +742,12 @@ function getAllowedOrderUpdates(original, edited) {
               />
               <TextField
                 label="Shipping Address"
-                value={editedOrder.shippingAddress?.address1 || ""}
+                value={editedOrder?.shippingAddress?.address1 || ""}
                 onChange={(val) =>
                   setEditedOrder({
                     ...editedOrder,
                     shippingAddress: {
-                      ...editedOrder.shippingAddress,
+                      ...editedOrder?.shippingAddress,
                       address1: val,
                     },
                   })
@@ -717,12 +755,12 @@ function getAllowedOrderUpdates(original, edited) {
               />
               <TextField
                 label="Phone (Shipping)"
-                value={editedOrder.shippingAddress?.phone || ""}
+                value={editedOrder?.shippingAddress?.phone || ""}
                 onChange={(val) =>
                   setEditedOrder({
                     ...editedOrder,
                     shippingAddress: {
-                      ...editedOrder.shippingAddress,
+                      ...editedOrder?.shippingAddress,
                       phone: val,
                     },
                   })
@@ -731,12 +769,12 @@ function getAllowedOrderUpdates(original, edited) {
               <TextField
                 label="Total Price"
                 type="number"
-                value={editedOrder.totalPrice || ""}
+                value={editedOrder?.totalPrice || ""}
                 onChange={(val) => setEditedOrder({ ...editedOrder, totalPrice: val })}
               />
               <TextField
                 label="Currency"
-                value={editedOrder.currency || ""}
+                value={editedOrder?.currency || ""}
                 onChange={(val) => setEditedOrder({ ...editedOrder, currency: val })}
               />
             </BlockStack>
@@ -748,31 +786,41 @@ function getAllowedOrderUpdates(original, edited) {
 }
 
 function mapOrderForEditing(order) {
-  const shopify = order.shopifyOrderData || {};
-  const customer = shopify.customer || {};
-  const billing = shopify.billing_address || {};
-  const shipping = shopify.shipping_address || {};
+  try {
+    if (!order) {
+      console.error('mapOrderForEditing: order is null or undefined');
+      return null;
+    }
 
-  return {
-    ...order,
-    customerName: `${customer.first_name || ""} ${customer.last_name || ""}`.trim(),
-    customerEmail: shopify.email || shopify.contact_email || "",
-    billingAddress: {
-      address1: billing.address1 || "",
-      city: billing.city || "",
-      country: billing.country || "",
-      zip: billing.zip || "",
-    },
-    shippingAddress: {
-      address1: shipping.address1 || "",
-      city: shipping.city || "",
-      country: shipping.country || "",
-      zip: shipping.zip || "",
-      phone: shipping.phone || shopify.phone || "",
-    },
-    totalPrice: shopify.total_price || "",
-    currency: shopify.currency || "",
-  };
+    const shopify = order.shopifyOrderData || {};
+    const customer = shopify.customer || {};
+    const billing = shopify.billing_address || {};
+    const shipping = shopify.shipping_address || {};
+
+    return {
+      ...order,
+      customerName: `${customer.first_name || ""} ${customer.last_name || ""}`.trim(),
+      customerEmail: shopify.email || shopify.contact_email || "",
+      billingAddress: {
+        address1: billing.address1 || "",
+        city: billing.city || "",
+        country: billing.country || "",
+        zip: billing.zip || "",
+      },
+      shippingAddress: {
+        address1: shipping.address1 || "",
+        city: shipping.city || "",
+        country: shipping.country || "",
+        zip: shipping.zip || "",
+        phone: shipping.phone || shopify.phone || "",
+      },
+      totalPrice: shopify.total_price || "",
+      currency: shopify.currency || "",
+    };
+  } catch (error) {
+    console.error('Error in mapOrderForEditing:', error);
+    return null;
+  }
 }
 
 
@@ -961,8 +1009,8 @@ export default function SetupPage() {
 
                     {responseMessage && (
                       <Banner
-                        title={responseMessage.content}
-                        status={responseMessage.type === "success" ? "success" : "critical"}
+                        title={responseMessage?.content || ""}
+                        status={responseMessage?.type === "success" ? "success" : "critical"}
                       />
                     )}
                   </BlockStack>
